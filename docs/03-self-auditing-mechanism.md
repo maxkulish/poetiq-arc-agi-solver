@@ -103,7 +103,7 @@ Shape mismatches are fundamental errors with no partial credit.
 
 ## Best Solution Tracking
 
-The system maintains a running "best" solution:
+The system maintains a running "best" solution. Note that if a later iteration achieves the same score, it updates the best (preferring the most recent refined hypothesis).
 
 ```mermaid
 flowchart LR
@@ -114,7 +114,7 @@ flowchart LR
         A2[Score: 0.72]
     end
     subgraph "Iteration 3"
-        A3[Score: 0.68]
+        A3[Score: 0.72]
     end
     subgraph "Iteration 4"
         A4[Score: 1.00]
@@ -124,13 +124,15 @@ flowchart LR
 
     A1 -->|"0.45 > 0"| BEST
     A2 -->|"0.72 > 0.45"| BEST
-    A3 -->|"0.68 < 0.72"| SKIP[Skip]
+    A3 -->|"0.72 >= 0.72 (Update)"| BEST
     A4 -->|"1.00 = Success!"| RETURN([Return])
 ```
 
 If iterations exhaust without finding a perfect solution, the best partial solution is returned. This is better than returning nothing.
 
 ## Budget Management
+
+Budgets are strictly enforced within the `llm()` wrapper function (`arc_agi/llm.py`), ensuring that no single problem consumes excessive resources regardless of the number of iterations.
 
 ### Time Tracking
 

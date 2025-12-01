@@ -102,17 +102,18 @@ flowchart TD
 
 ### Grouping by Output
 
-Solutions are grouped by their **test output** (using canonical string representation):
-- Output A: [[1,2],[3,4]] → "[[1,2],[3,4]]"
-- Output A': [[1,2],[3,4]] → "[[1,2],[3,4]]" (same group)
-- Output B: [[5,6],[7,8]] → "[[5,6],[7,8]]" (different group)
+Solutions are grouped by their **test output** (using a canonical string representation of the result list):
+- Output A: `[[1,2],[3,4]]` → `[[1,2],[3,4]]`
+- Output A': `[[1,2],[3,4]]` → `[[1,2],[3,4]]` (same group)
+- Output B: `[[5,6],[7,8]]` → `[[5,6],[7,8]]` (different group)
 
 ### Ranking Strategy
 
 1. **Passers first**: Solutions that pass all training examples
 2. **By vote count**: More experts agreeing = higher confidence
-3. **By soft score**: For ties, prefer higher accuracy
-4. **Diversity-first**: Pick one from each group before repeating
+3. **By iterations (optional)**: Break ties by preferring solutions found earlier (or later)
+4. **By soft score**: For further ties, prefer higher accuracy
+5. **Diversity-first**: Pick one from each group before repeating
 
 ## Passers vs Failures
 

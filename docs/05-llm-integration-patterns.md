@@ -72,28 +72,20 @@ Different APIs have different rate limits:
 - Exceeding limits → 429 errors → wasted retries
 
 ### The Solution
-AsyncIO limiter per model:
+AsyncIO limiter per model (pre-defined configuration):
 
 ```python
 from asynciolimiter import Limiter
 
-rate_limits: dict[str, float] = {
-    "gemini/gemini-2.5-pro": 2.0,  # 2 req/sec
-    "openai/gpt-5": 1.0,           # 1 req/sec
-    # default: 1.0
+limiters: dict[str, Limiter] = {
+    "gemini/gemini-2.5-pro": Limiter(2.0),
+    "openai/gpt-5": Limiter(1.0),
+    # ...
 }
 
-limiters: dict[str, Limiter] = {}
-
-def get_limiter(model: str) -> Limiter:
-    if model not in limiters:
-        rate = rate_limits.get(model, 1.0)
-        limiters[model] = Limiter(rate)
-    return limiters[model]
-
-# Usage
-async with get_limiter(model):
-    response = await acompletion(...)
+# Usage inside the LLM wrapper
+await limiters[model].wait()
+response = await acompletion(...)
 ```
 
 ### Why This Matters
@@ -148,36 +140,30 @@ Some problems are harder than others:
 - Budget: don't spend forever on one problem
 
 ### The Solution
-Track cumulative time and timeout counts:
+Pass budget down to the LLM wrapper:
 
 ```python
-async def solve_with_budget(problem, max_time=600, max_timeouts=15):
-    remaining_time = max_time
-    remaining_timeouts = max_timeouts
+# In the solver loop
+response, duration, remaining_time, remaining_timeouts = await llm(
+    ...,
+    max_remaining_time=max_total_time,
+    max_remaining_timeouts=max_total_timeouts,
+)
 
-    for iteration in range(max_iterations):
-        start = time.time()
+# In the LLM wrapper
+current_timeout = min(request_timeout, max_remaining_time)
+start = time.time()
+try:
+    resp = await acompletion(..., timeout=current_timeout)
+except TimeoutError:
+    max_remaining_timeouts -= 1
+    if max_remaining_timeouts <= 0:
+        raise RuntimeError("Too many timeouts")
 
-        try:
-            response = await asyncio.wait_for(
-                llm_call(problem),
-                timeout=min(60, remaining_time)
-            )
-        except asyncio.TimeoutError:
-            remaining_timeouts -= 1
-            if remaining_timeouts <= 0:
-                break  # Too many timeouts, give up
-
-        elapsed = time.time() - start
-        remaining_time -= elapsed
-
-        if remaining_time <= 0:
-            break  # Time budget exhausted
-
-        if is_solution(response):
-            return response
-
-    return best_partial_solution
+duration = time.time() - start
+max_remaining_time -= duration
+if max_remaining_time <= 0:
+    raise RuntimeError("Time budget exhausted")
 ```
 
 ### Why This Matters

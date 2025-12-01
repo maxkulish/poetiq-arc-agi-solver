@@ -61,6 +61,8 @@ Code acts as a **verifiable hypothesis**. The LLM says "I think the pattern is X
 
 ### The Prompt Structure
 
+A simplified view of the prompt sent to the LLM:
+
 ```
 <Problem>
 Here are the training examples:
@@ -69,14 +71,13 @@ Example 1:
 Input: [grid diagram]
 Output: [grid diagram]
 
-Example 2:
-Input: [grid diagram]
-Output: [grid diagram]
+...
 </Problem>
 
 <Instructions>
 Analyze the examples to find the transformation pattern.
 Write a Python function: def transform(grid: np.ndarray) -> np.ndarray
+Available libraries: numpy, scipy, cv2 (OpenCV), and standard python libraries.
 </Instructions>
 ```
 
@@ -132,6 +133,22 @@ If the code doesn't pass all examples, the system builds **structured feedback**
 2. **Shape analysis**: If dimensions mismatch, explain expected vs actual
 3. **Visual diff**: For same-shape failures, show grid with `prediction/expected` format
 4. **Accuracy score**: 0.0 to 1.0 measuring pixel-level correctness
+
+### The Feedback Wrapper
+
+The feedback is not just appended raw; it is wrapped in a prompt that instructs the LLM to learn from these mistakes:
+
+```
+**EXISTING PARTIAL/INCORRECT SOLUTIONS:**
+
+Following are some of the best, though not completely correct, solutions so far. 
+For each solution, its code, corresponding feedback regarding its output... 
+Study these solutions and corresponding feedback and produce a new solution fixing all the issues.
+
+<solution_1>
+...
+</solution_1>
+```
 
 ### Example Feedback
 
